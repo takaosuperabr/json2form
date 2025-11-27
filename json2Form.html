@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Formulário Dinâmico - Estilo Corporativo</title>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+    body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: #f4f5f7;
+        margin: 20px;
+        color: #333;
+    }
+
+    h2 {
+        color: #004085;
+        margin-bottom: 10px;
+    }
+
+    textarea {
+        width: 100%;
+        height: 150px;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-family: "Consolas", monospace;
+        background: #fff;
+    }
+
+    /* Tabela corporativa com radio à direita */
+    .radio-table {
+        border-collapse: collapse;
+        width: 400px;
+        margin-bottom: 15px;
+        background: #ffffff;
+        border: 1px solid #d0d0d0;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .radio-table td {
+        padding: 10px;
+        vertical-align: middle;
+        border-bottom: 1px solid #e2e2e2;
+    }
+
+    .radio-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .label-cell {
+        width: 100%;
+        text-align: left;
+    }
+
+    .radio-cell {
+        width: 40px;
+        text-align: right;
+    }
+
+    .icon-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .icon-label i {
+        color: #0056b3;
+    }
+
+    button {
+        padding: 8px 16px;
+        border: none;
+        background: #0056b3;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 15px;
+        margin-top: 5px;
+    }
+
+    button:hover {
+        background: #003f80;
+    }
+
+    /* GRID REDUZIDO */
+    .field {
+        display: grid;
+        grid-template-columns: 110px 1fr; /* mais compacto */
+        gap: 6px 10px;
+        margin-bottom: 6px;
+        align-items: center;
+    }
+
+    .field label {
+        font-weight: bold;
+    }
+
+    input, select {
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        width: 280px;
+    }
+
+    .obj-container, .array-item {
+        border: 1px solid #c9d6e2;
+        background: #ffffff;
+        padding: 12px;
+        margin: 10px 0;
+        border-radius: 6px;
+    }
+
+    .obj-container h4, .array-item h4 {
+        margin-top: 0;
+        margin-bottom: 8px;
+        color: #0056b3;
+    }
+
+    pre {
+        background: #fff;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 13px;
+    }
+</style>
+</head>
+<body>
+
+<h2><i class="fa-solid fa-gears"></i> Gerar Formulário a partir de JSON</h2>
+
+<!-- Tabela dos radios com ícone à esquerda e botão à direita -->
+<table class="radio-table">
+    <tr>
+        <td class="label-cell">
+            <div class="icon-label">
+                <i class="fa-solid fa-keyboard"></i> Usar TextArea
+            </div>
+        </td>
+        <td class="radio-cell">
+            <input type="radio" name="src" value="textarea" checked>
+        </td>
+    </tr>
+
+    <tr>
+        <td class="label-cell">
+            <div class="icon-label">
+                <i class="fa-solid fa-file-arrow-up"></i> Usar Arquivo JSON
+            </div>
+        </td>
+        <td class="radio-cell">
+            <input type="radio" name="src" value="file">
+        </td>
+    </tr>
+</table>
+
+<!-- TextArea -->
+<div id="textareaContainer">
+<textarea id="jsonInput">
+{
+  "FleetServers": [
+    {
+      "Name": "Omron",
+      "Type": "Omron",
+      "BaseUrl": "http://172.30.38.34",
+      "Port": 8080,
+      "ApiKey": "OMRON_API_KEY",
+      "Enabled": true
+    },
+    {
+      "Name": "Mir",
+      "Type": "MiR",
+      "BaseUrl": "http://172.30.38.23",
+      "Port": 8080,
+      "ApiKey": "Basic ZGlzdHJpYnV0b3I6NjJmMmYwZjFlZmYxMGQzMTUyYzk1ZjZmMDU5NjU3NmU0ODJiYjhlNDQ4MDY0MzNmNGNmOTI5NzkyODM0YjAxNA==",
+      "Enabled": true
+    }
+  ]
+}
+</textarea>
+</div>
+
+<!-- Upload -->
+<div id="fileContainer" style="display:none;">
+    <input type="file" id="jsonFile" accept=".json">
+</div>
+
+<br>
+<button onclick="gerarFormulario()"><i class="fa-solid fa-wand-magic-sparkles"></i> Gerar Formulário</button>
+
+<h3><i class="fa-solid fa-list-check"></i> Formulário</h3>
+<div id="formulario"></div>
+
+<button onclick="gravarJSON()"><i class="fa-solid fa-floppy-disk"></i> Gravar JSON</button>
+
+<h3><i class="fa-solid fa-code"></i> Resultado</h3>
+<pre id="resultado"></pre>
+
+<script>
+document.querySelectorAll('input[name="src"]').forEach(radio => {
+    radio.addEventListener("change", () => {
+        const mode = document.querySelector('input[name="src"]:checked').value;
+        document.getElementById("textareaContainer").style.display =
+            mode === "textarea" ? "block" : "none";
+        document.getElementById("fileContainer").style.display =
+            mode === "file" ? "block" : "none";
+    });
+});
+
+function criarCampos(obj, container, path = "") {
+    if (Array.isArray(obj)) {
+        obj.forEach((item, index) => {
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "array-item";
+            itemDiv.innerHTML = `<h4>Item ${index + 1}</h4>`;
+            container.appendChild(itemDiv);
+            criarCampos(item, itemDiv, `${path}[${index}]`);
+        });
+        return;
+    }
+
+    if (typeof obj === "object") {
+        for (let chave in obj) {
+            let valor = obj[chave];
+            const fullPath = path ? path + "." + chave : chave;
+
+            if (typeof valor === "object") {
+                const subDiv = document.createElement("div");
+                subDiv.className = "obj-container";
+                subDiv.innerHTML = `<h4>${chave}</h4>`;
+                container.appendChild(subDiv);
+                criarCampos(valor, subDiv, fullPath);
+                continue;
+            }
+
+            const div = document.createElement("div");
+            div.className = "field";
+
+            const label = document.createElement("label");
+            label.textContent = chave;
+
+            let input;
+
+            if (typeof valor === "boolean") {
+                input = document.createElement("select");
+                input.innerHTML = `
+                    <option value="true" ${valor ? "selected" : ""}>True</option>
+                    <option value="false" ${!valor ? "selected" : ""}>False</option>
+                `;
+            } else {
+                input = document.createElement("input");
+                input.type = (typeof valor === "number") ? "number" : "text";
+                input.value = valor;
+            }
+
+            input.dataset.path = fullPath;
+
+            div.appendChild(label);
+            div.appendChild(input);
+            container.appendChild(div);
+        }
+    }
+}
+
+async function lerJSON() {
+    const mode = document.querySelector('input[name="src"]:checked').value;
+
+    if (mode === "textarea") {
+        return JSON.parse(document.getElementById("jsonInput").value);
+    }
+
+    const fileInput = document.getElementById("jsonFile");
+    if (!fileInput.files.length) {
+        alert("Selecione um arquivo JSON!");
+        return null;
+    }
+
+    const text = await fileInput.files[0].text();
+    return JSON.parse(text);
+}
+
+async function gerarFormulario() {
+    const container = document.getElementById("formulario");
+    container.innerHTML = "";
+
+    try {
+        const json = await lerJSON();
+        if (json) criarCampos(json, container);
+    } catch (e) {
+        alert("Erro ao ler JSON: " + e.message);
+    }
+}
+
+function gravarJSON() {
+    let json;
+    try {
+        json = JSON.parse(document.getElementById("jsonInput").value);
+    } catch {
+        alert("JSON inválido!");
+        return;
+    }
+
+    const inputs = document.querySelectorAll("#formulario input, #formulario select");
+
+    inputs.forEach(input => {
+        const path = input.dataset.path;
+        let value = input.value;
+
+        if (value === "true") value = true;
+        else if (value === "false") value = false;
+        else if (!isNaN(value) && value.trim() !== "") value = Number(value);
+
+        const partes = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+        let ref = json;
+
+        for (let i = 0; i < partes.length - 1; i++) {
+            ref = ref[partes[i]];
+        }
+
+        const ultima = partes[partes.length - 1];
+        ref[ultima] = value;
+    });
+
+    document.getElementById("resultado").textContent =
+        JSON.stringify(json, null, 4);
+}
+</script>
+
+</body>
+</html>
